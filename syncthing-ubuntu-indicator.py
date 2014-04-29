@@ -112,6 +112,7 @@ class Main(object):
             self.syncthing_update_menu.show()
         else:
             self.syncthing_update_menu.hide()
+        GLib.timeout_add_seconds(28800, self.check_for_syncthing_update)
 
 
     def start_poll(self):
@@ -181,7 +182,8 @@ class Main(object):
             self.downloading_files.remove(file_details)
         except ValueError:
             print "Completed a file %s which we didn't know about" % (event["params"]["file"],)
-        self.recent_files.append({"file": event["params"]["file"], "direction": "down"})
+        self.recent_files.append({"file": event["params"]["file"], 
+            "direction": "down", "time": datetime.datetime.now()})
         self.recent_files = self.recent_files[-5:]
         self.update_current_files()
 
@@ -225,7 +227,8 @@ class Main(object):
                     updown = u"\u21d1"
                 else:
                     updown = u"?"
-                mi = Gtk.MenuItem(u"%s %s" % (updown, f["file"]))
+                mi = Gtk.MenuItem(u"%s %s (%s)" % (
+                    updown, f["file"], f["time"].strftime("%H.%M")))
                 self.recent_files_submenu.append(mi)
                 mi.show()
             self.recent_files_menu.show()
