@@ -20,6 +20,7 @@ class Main(object):
         self.connected_nodes = []
         self.downloading_files = []
         self.uploading_files = []
+        self.recent_files = []
 
         self.menu = Gtk.Menu()
         
@@ -37,8 +38,15 @@ class Main(object):
 
         self.current_files_menu = Gtk.MenuItem("Current files")
         self.current_files_menu.show()
-        self.current_files_menu.set_sensitive(False)
         self.menu.append(self.current_files_menu)
+        self.current_files_submenu = Gtk.Menu()
+        self.current_files_menu.set_submenu(self.current_files_submenu)
+
+
+        self.recent_files_menu = Gtk.MenuItem("Recently synced")
+        self.menu.append(self.recent_files_menu)
+        self.recent_files_submenu = Gtk.Menu()
+        self.recent_files_menu.set_submenu(self.recent_files_submenu)
         self.update_current_files()
 
         open_web_ui = Gtk.MenuItem("Open web interface")
@@ -163,33 +171,64 @@ class Main(object):
         self.update_connected_nodes()
 
     def event_pull_start(self, event):
-        file_details = "%s-%s" % (event["params"].get("repo"), event["params"].get("file"))
+        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("file")}
         self.downloading_files.append(file_details)
         self.update_current_files()
 
     def event_pull_complete(self, event):
-        file_details = "%s-%s" % (event["params"].get("repo"), event["params"].get("file"))
+        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("file")}
         try:
             self.downloading_files.remove(file_details)
         except ValueError:
             print "Completed a file %s which we didn't know about" % (event["params"]["file"],)
+        self.recent_files.append({"file": event["params"]["file"], "direction": "down"})
+        self.recent_files = self.recent_files[-5:]
         self.update_current_files()
 
     def update_last_checked(self, isotime):
         dt = dateutil.parser.parse(isotime)
-        self.last_checked_menu.set_label("Last checked: %s" % dt)
+        self.last_checked_menu.set_label("Last checked: %s" % (dt.strftime("%H.%M"),))
 
     def update_connected_nodes(self):
         self.connected_nodes_menu.set_label("Connected machines: %s" % (
             len(self.connected_nodes),))
 
     def update_current_files(self):
-        self.current_files_menu.set_label(u"\u21d1 %s  \u21d3 %s" % (
+        self.current_files_menu.set_label(u"Syncing \u21d1 %s  \u21d3 %s" % (
             len(self.uploading_files), len(self.downloading_files)))
         if (len(self.uploading_files), len(self.downloading_files)) == (0,0):
             self.current_files_menu.hide()
         else:
+            # repopulate the current files menu
+            for child in self.current_files_submenu.get_children():
+                self.current_files_submenu.remove(child)
+            for f in self.uploading_files:
+                mi = Gtk.MenuItem(u"\u21d1 %s" % f["file"])
+                self.current_files_submenu.append(mi)
+                mi.show()
+            for f in self.downloading_files:
+                mi = Gtk.MenuItem(u"\u21d3 %s" % f["file"])
+                self.current_files_submenu.append(mi)
+                mi.show()
             self.current_files_menu.show()
+
+        # repopulate the recent files menu
+        if not self.recent_files:
+            self.recent_files_menu.hide()
+        else:
+            for child in self.recent_files_submenu.get_children():
+                self.recent_files_submenu.remove(child)
+            for f in self.recent_files:
+                if f["direction"] == "down":
+                    updown = u"\u21d3"
+                elif f["direction"] == "up":
+                    updown = u"\u21d1"
+                else:
+                    updown = u"?"
+                mi = Gtk.MenuItem(u"%s %s" % (updown, f["file"]))
+                self.recent_files_submenu.append(mi)
+                mi.show()
+            self.recent_files_menu.show()
 
 if __name__ == "__main__":
     import signal
