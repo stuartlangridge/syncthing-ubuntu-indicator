@@ -136,7 +136,6 @@ class Main(object):
                 print "request failed to parse json: error"
                 GLib.timeout_add_seconds(10, self.start_poll)
                 self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
-            print "got queue", queue
             for qitem in queue:
                 self.process_event(qitem)
         else:
@@ -155,7 +154,8 @@ class Main(object):
         self.update_last_checked(event["timestamp"])
 
     def event_timeout(self, event):
-        print "event timeout"
+        #print "event timeout; re-polling."
+        pass
 
     def event_unknown_event(self, event):
         print "got unknown event", event
