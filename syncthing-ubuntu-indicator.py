@@ -59,11 +59,41 @@ class Main(object):
         self.syncthing_update_menu.connect("activate", self.open_releases_page)
         self.menu.append(self.syncthing_update_menu)
 
+        self.syncthing_base = "http://localhost:8080"
+        GLib.idle_add(self.start_load_config)
+
+    def start_load_config(self):
+        confdir = GLib.get_user_config_dir()
+        if not confdir: confdir = os.path.expanduser("~/.config")
+        conffile = os.path.join(confdir, "syncthing", "config.xml")
+        if not os.path.isfile(conffile):
+            print "Couldn't find config file."
+        f = Gio.file_new_for_path(conffile)
+        f.load_contents_async(None, self.finish_load_config)
+    
+    def finish_load_config(self, fp, async_result):
+        try:
+            success, data, etag = fp.load_contents_finish(async_result)
+        except:
+            return self.bail_releases("Couldn't open config file")
+        try:
+            dom = minidom.parseString(data)
+        except:
+            return self.bail_releases("Couldn't parse config file")
+        conf = dom.getElementsByTagName("configuration")
+        if not conf: return self.bail_releases("No configuration element in config")
+        gui = conf[0].getElementsByTagName("gui")
+        if not gui: return self.bail_releases("No gui element in config")
+        address = gui[0].getElementsByTagName("address")
+        if not address: return self.bail_releases("No address element in config")
+        if not address[0].hasChildNodes():
+            return self.bail_releases("No address specified in config")
+        self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
 
     def syncthing(self, url):
-        return urlparse.urljoin("http://localhost:8180", url)
+        return urlparse.urljoin(self.syncthing_base, url)
 
     def open_web_ui(self, *args):
         webbrowser.open(self.syncthing(""))
