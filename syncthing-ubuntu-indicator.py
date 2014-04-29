@@ -11,10 +11,10 @@ class Main(object):
         icon_path = os.path.join(icon_path, "icons")
         self.ind = appindicator.Indicator.new_with_path (
                             "syncthing-indicator",
-                            "sync-client-idle",
+                            "syncthing-client-idle",
                             appindicator.IndicatorCategory.APPLICATION_STATUS,
                             icon_path)
-        self.ind.set_attention_icon ("sync-client-updating")
+        self.ind.set_attention_icon ("syncthing-client-updating")
         self.ind.set_status (appindicator.IndicatorStatus.ACTIVE)
         
         self.connected_nodes = []
@@ -118,7 +118,7 @@ class Main(object):
         except:
             print "request failed: error"
             GLib.timeout_add_seconds(10, self.start_poll)
-            self.ind.set_icon_full("sync-client-error", "Couldn't connect to syncthing")
+            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
             return
         if success:
             try:
@@ -126,18 +126,18 @@ class Main(object):
             except ValueError:
                 print "request failed to parse json: error"
                 GLib.timeout_add_seconds(10, self.start_poll)
-                self.ind.set_icon_full("sync-client-error", "Couldn't connect to syncthing")
+                self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
             print "got queue", queue
             for qitem in queue:
                 self.process_event(qitem)
         else:
             print "request failed"
         if self.downloading_files or self.uploading_files:
-            self.ind.set_icon_full("sync-client-updating", 
+            self.ind.set_icon_full("syncthing-client-updating", 
                 "Updating %s files" % (
                     len(self.downloading_files) + len(self.uploading_files)))
         else:
-            self.ind.set_icon_full("sync-client-idle", "Up to date")
+            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         GLib.idle_add(self.start_poll)
 
     def process_event(self, event):
@@ -192,6 +192,8 @@ class Main(object):
             self.current_files_menu.show()
 
 if __name__ == "__main__":
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     app = Main()
     Gtk.main()
 
